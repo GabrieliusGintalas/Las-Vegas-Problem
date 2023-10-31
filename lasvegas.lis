@@ -1,0 +1,310 @@
+     1                                  ;Author: Gabrielius Gintalas
+     2                                  ;Date: 08/30/23
+     3                                  ;File Function: Assembly code to calculate total average speed and total time 
+     4                                  ;Program name: Assignment 01 - Las Vegas
+     5                                  
+     6                                  section .data
+     7                                      ;Initialized data
+     8 00000000 506C6561736520656E-         enterSpeed db "Please enter the speed for the initial segment of the trip (mph): ", 10, 0
+     8 00000009 746572207468652073-
+     8 00000012 7065656420666F7220-
+     8 0000001B 74686520696E697469-
+     8 00000024 616C207365676D656E-
+     8 0000002D 74206F662074686520-
+     8 00000036 7472697020286D7068-
+     8 0000003F 293A200A00         
+     9 00000044 466F7220686F77206D-         howMiles db "For how many miles will you maintain this average speed?", 10, 0
+     9 0000004D 616E79206D696C6573-
+     9 00000056 2077696C6C20796F75-
+     9 0000005F 206D61696E7461696E-
+     9 00000068 207468697320617665-
+     9 00000071 726167652073706565-
+     9 0000007A 643F0A00           
+    10 0000007E 576861742077696C6C-         finalSpeed db "What will be your speed during the final segment of the trip (mph)? ", 10, 0
+    10 00000087 20626520796F757220-
+    10 00000090 737065656420647572-
+    10 00000099 696E67207468652066-
+    10 000000A2 696E616C207365676D-
+    10 000000AB 656E74206F66207468-
+    10 000000B4 65207472697020286D-
+    10 000000BD 7068293F200A00     
+    11 000000C4 596F75722061766572-         averageSpeed db "Your average speed will be ", 0
+    11 000000CD 616765207370656564-
+    11 000000D6 2077696C6C20626520-
+    11 000000DF 00                 
+    12 000000E0 54686520746F74616C-         totalTime db "The total travel time will be ", 0
+    12 000000E9 2074726176656C2074-
+    12 000000F2 696D652077696C6C20-
+    12 000000FB 62652000           
+    13                                  
+    14 000000FF 206D70682E0A00              miles db " mph.", 10, 0                 ;This will be used to print the mph at the end of the string
+    15 00000106 20686F7572732E0A00          hours db " hours.", 10, 0               ;This will be used to print hours at the end of the string
+    16                                  
+    17 0000010F 0000000000B06F40            totalDistance dq 253.5                  ;This will used to reference total speed
+    18 00000117 256C6600                    floatFormat db "%lf", 0                 ;This will be used to create a newline for user input
+    19                                      
+    20                                      ;Error message data
+    21 0000011B 416E20696E76616C69-         invalidInput db "An invalid speed was entered. Please run the program again and enter correct data.", 10, 0
+    21 00000124 642073706565642077-
+    21 0000012D 617320656E74657265-
+    21 00000136 642E20506C65617365-
+    21 0000013F 2072756E2074686520-
+    21 00000148 70726F6772616D2061-
+    21 00000151 6761696E20616E6420-
+    21 0000015A 656E74657220636F72-
+    21 00000163 726563742064617461-
+    21 0000016C 2E0A00             
+    22 0000016F 0A00                        space db "", 10 ,0
+    23 00000171 596F75722061766572-         avgSpeedNotCalculated db "Your average speed was not calculated.", 10, 0
+    23 0000017A 616765207370656564-
+    23 00000183 20776173206E6F7420-
+    23 0000018C 63616C63756C617465-
+    23 00000195 642E0A00           
+    24 00000199 54686520746F74616C-         totalTimeNotCaculated db "The total travel time was not calculated.", 10, 0
+    24 000001A2 2074726176656C2074-
+    24 000001AB 696D6520776173206E-
+    24 000001B4 6F742063616C63756C-
+    24 000001BD 617465642E0A00     
+    25                                  
+    26                                  section .bss
+    27                                      ;Uninitialized data
+    28                                      extern printf, scanf                    ;Get the data to be able to print and scan
+    29                                      global lasvegas                         ;Make the function global so it can be accessed
+    30                                  
+    31                                      ;User input
+    32 00000000 ????????????????            firstSpeed resq 1                       ;Initial speed float
+    33 00000008 ????????????????            firstMiles resq 1                       ;How many miles initially?
+    34 00000010 ????????????????            secondSpeed resq 1                      ;What will the speed be during the final portion of the trip
+    35                                  
+    36                                      ;First time - Distance / Speed
+    37 00000018 ????????????????            firstTime resq 1                        ;This is how long the first part of the trip took 
+    38                                  
+    39                                      ;Second Distance - Total distance - first distance
+    40 00000020 ????????????????            secondMiles resq 1                   ;This will be used to calculate the second distance of the trip
+    41 00000028 ????????????????            secondTime resq 1                       ;This will used to calculate how long the first part of the trip is 
+    42 00000030 ????????????????            totalAvgSpeed resq 1                    ;Total average speed var
+    43 00000038 ????????????????            finalTime resq 1                        ;Total travel times var
+    44                                  
+    45                                  section .text
+    46                                      ;Code execution here
+    47                                      showError:
+    48 00000000 B800000000                      mov qword rax, 0                    ;Getting the rax ready for push
+    49 00000005 50                              push rax                            ;Pushing rax to stack
+    50 00000006 48BF-                           mov rdi, invalidInput               ;Prepare string for print
+    50 00000008 [1B01000000000000] 
+    51 00000010 E8(00000000)                    call printf                         ;Print invalidInput string
+    52 00000015 58                              pop rax                             ;Pop rax since we don't need it anymore
+    53                                  
+    54 00000016 B800000000                      mov qword rax, 0                    ;Getting the rax ready for push
+    55 0000001B 50                              push rax                            ;Pushing rax to stack
+    56 0000001C 48BF-                           mov rdi, space                      ;Prepare string for print
+    56 0000001E [6F01000000000000] 
+    57 00000026 E8(00000000)                    call printf                         ;Print space string
+    58 0000002B 58                              pop rax                             ;Pop rax since we don't need it anymore
+    59                                  
+    60 0000002C B800000000                      mov qword rax, 0                    ;Getting the rax ready for push
+    61 00000031 50                              push rax                            ;Pushing rax to stack
+    62 00000032 48BF-                           mov rdi, avgSpeedNotCalculated      ;Prepare string for print
+    62 00000034 [7101000000000000] 
+    63 0000003C E8(00000000)                    call printf                         ;Print avgSpeedNotCalculated string
+    64 00000041 58                              pop rax                             ;Pop rax since we don't need it anymore
+    65                                          
+    66 00000042 B800000000                      mov qword rax, 0                    ;Getting the rax ready for push
+    67 00000047 50                              push rax                            ;Pushing rax to stack
+    68 00000048 48BF-                           mov rdi, totalTimeNotCaculated      ;Prepare string for print
+    68 0000004A [9901000000000000] 
+    69 00000052 E8(00000000)                    call printf                         ;Print totalTimeNotCalculated string
+    70 00000057 58                              pop rax                             ;Pop rax since we don't need it anymore
+    71                                  
+    72 00000058 B800000000                      mov qword rax, 0                    ;Getting the rax ready for push
+    73 0000005D 50                              push rax                            ;Pushing rax to stack
+    74 0000005E 48BF-                           mov rdi, space                      ;Prepare string for print
+    74 00000060 [6F01000000000000] 
+    75 00000068 E8(00000000)                    call printf                         ;Print space string
+    76 0000006D 58                              pop rax                             ;Pop rax since we don't need it anymore
+    77                                  
+    78 0000006E F20F100425-                     movsd xmm0, qword [totalDistance]   ;Set xmm0 to print the totalDistance as the last thing
+    78 00000073 [0F010000]         
+    79 00000077 C3                              ret                                 ;Return this assembly function so it doesn't do anything else
+    80                                  
+    81                                      lasvegas:
+    82                                          ;output "enter speed"
+    83 00000078 B800000000                      mov qword rax, 0                    ;Getting the rax ready for push
+    84 0000007D 50                              push rax                            ;Pushing rax to stack
+    85 0000007E 48BF-                           mov rdi, enterSpeed                 ;Load the message string into rdi.
+    85 00000080 [0000000000000000] 
+    86 00000088 E8(00000000)                    call printf                         ;Print enterSpeed string
+    87 0000008D 58                              pop rax                             ;Re-align the stack after returning from printf.
+    88                                  
+    89                                          ;input initial speed
+    90 0000008E 48BF-                           mov rdi, floatFormat                ;Set rdi so we can input a double-float
+    90 00000090 [1701000000000000] 
+    91 00000098 48BE-                           mov rsi, firstSpeed                 ;Get the address of firstSpeed
+    91 0000009A [0000000000000000] 
+    92 000000A2 B800000000                      mov qword rax, 0                    ;Getting the rax ready for push
+    93 000000A7 50                              push rax                            ;Pushing rax to stack
+    94 000000A8 E8(00000000)                    call scanf                          ;Get user input
+    95 000000AD 58                              pop rax                             ;Pop rax since we don't need it anymore
+    96 000000AE F2440F100425-                   movsd xmm8, qword [firstSpeed]      ;Moving the data of firstSpeed into the register
+    96 000000B4 [00000000]         
+    97                                  
+    98                                          ;check to see if the input was valid
+    99 000000B8 66450F57ED                      xorpd xmm13, xmm13                  ;Clean xmm13
+   100 000000BD 66450F2EC5                      ucomisd xmm8, xmm13                 ;Check if xmm8 >= 0
+   101 000000C2 0F8638FFFFFF                    jbe showError                       ;jump to showError
+   102                                  
+   103                                          ;output "how many miles?"
+   104 000000C8 B800000000                      mov qword rax, 0                    ;Getting the rax ready for push
+   105 000000CD 50                              push rax                            ;Pushing rax to stack
+   106 000000CE 48BF-                           mov rdi, howMiles                   ;Set the string to rdi
+   106 000000D0 [4400000000000000] 
+   107 000000D8 E8(00000000)                    call printf                         ;Print the howMiles String
+   108 000000DD 58                              pop rax                             ;Pop rax since we don't need it anymore
+   109                                  
+   110                                          ;input miles
+   111 000000DE 48BF-                           mov rdi, floatFormat                ;Set rdi so we can input a double-float
+   111 000000E0 [1701000000000000] 
+   112 000000E8 48BE-                           mov rsi, firstMiles                 ;Prepare the variable for the data
+   112 000000EA [0800000000000000] 
+   113 000000F2 B800000000                      mov qword rax, 0                    ;Getting the rax ready for push
+   114 000000F7 50                              push rax                            ;Pushing rax to stack
+   115 000000F8 E8(00000000)                    call scanf                          ;Get user input
+   116 000000FD 58                              pop rax                             ;Pop rax since we don't need it anymore
+   117 000000FE F2440F100C25-                   movsd xmm9, qword [firstMiles]      ;Moving date from firstMiles into the register
+   117 00000104 [08000000]         
+   118                                  
+   119                                          ;check to see if firstMiles input was valid
+   120 00000108 66450F57ED                      xorpd xmm13, xmm13                  ;Clean xmm13
+   121 0000010D 66450F2ECD                      ucomisd xmm9, xmm13                 ;Check if xmm9 <= 0
+   122 00000112 0F86E8FEFFFF                    jbe showError                       ;Jump to showError
+   123                                  
+   124                                          ;check to see if firstMiles input was valid
+   125 00000118 F2440F102C25-                   movsd xmm13, qword[totalDistance]   ;Set xmm13 to 253.5
+   125 0000011E [0F010000]         
+   126 00000122 66450F2EE9                      ucomisd xmm13, xmm9                 ;Check if xmm9 >= 253.5
+   127 00000127 0F86D3FEFFFF                    jbe showError                       ;Jump to showError
+   128                                  
+   129                                          ;ouput "speed during second part of the trip"
+   130 0000012D B800000000                      mov qword rax, 0                    ;Getting the rax ready for push
+   131 00000132 50                              push rax                            ;Pushing rax to stack
+   132 00000133 48BF-                           mov rdi, finalSpeed                 ;Getting the string ready to print
+   132 00000135 [7E00000000000000] 
+   133 0000013D E8(00000000)                    call printf                         ;Print the string
+   134 00000142 58                              pop rax                             ;Pop rax since we don't need it anymore
+   135                                  
+   136                                          ;input second speed 
+   137 00000143 48BF-                           mov rdi, floatFormat                ;Set rdi so we can input a double-float
+   137 00000145 [1701000000000000] 
+   138 0000014D 48BE-                           mov rsi, secondSpeed                ;Prepare the variable for the data
+   138 0000014F [1000000000000000] 
+   139 00000157 B800000000                      mov qword rax, 0                    ;Getting the rax ready for push
+   140 0000015C 50                              push rax                            ;Pushing rax to stack
+   141 0000015D E8(00000000)                    call scanf                          ;Get user input
+   142 00000162 58                              pop rax                             ;Pop rax since we don't need it anymore
+   143 00000163 F2440F101425-                   movsd xmm10, qword [secondSpeed]    ;Moving date from secondSpeed into the register
+   143 00000169 [10000000]         
+   144                                  
+   145                                          ;check if input for secondSpeed was valid
+   146 0000016D 66450F57ED                      xorpd xmm13, xmm13                  ;Clean xmm13
+   147 00000172 66450F2ED5                      ucomisd xmm10, xmm13                ;Compare if xmm10 is < 0
+   148 00000177 0F8683FEFFFF                    jbe showError                       ;Jump to showError if thats the case
+   149                                  
+   150                                          ;Calculate average speed
+   151                                          ;Distance / Speed = Time - do this twice for both speeds
+   152                                          ;Calculate first average
+   153 0000017D F2450F5EC8                      divsd xmm9, xmm8                    ;Divide these two registers to get the first time xmm9 = distance, xmm8 = speed
+   154 00000182 F2440F110C25-                   movsd qword [firstTime], xmm9       ;Moving the xmm9 value into firstTime
+   154 00000188 [18000000]         
+   155                                  
+   156                                          ;Calculate second average
+   157 0000018C F2440F101C25-                   movsd xmm11, [totalDistance]        ;Move the totalDistance value into xmm11
+   157 00000192 [0F010000]         
+   158 00000196 F2440F102425-                   movsd xmm12, qword [firstMiles]     ;Move the firstMiles value into xmm12
+   158 0000019C [08000000]         
+   159 000001A0 F2450F5CDC                      subsd xmm11, xmm12                  ;Subtract totalDistance - firstMiles to get secondMiles
+   160 000001A5 F2440F111C25-                   movsd qword [secondMiles], xmm11 ;Move xmm11 data into the secondMiles
+   160 000001AB [20000000]         
+   161                                          
+   162 000001AF F2450F5EDA                      divsd xmm11, xmm10                  ;Divide these two registers to get the first time xmm11 = distance, xmm10 = speed
+   163 000001B4 F2440F111C25-                   movsd qword [secondTime], xmm11     ;Moving the xmm11 value into secondTime
+   163 000001BA [28000000]         
+   164                                  
+   165                                          ;Average = Total Distance / Total Time
+   166                                          ;Calculate total average
+   167 000001BE F2440F100425-                   movsd xmm8, qword [firstSpeed]      ;Store xmm8 into the first speed
+   167 000001C4 [00000000]         
+   168 000001C8 F2440F100C25-                   movsd xmm9, qword [firstTime]       ;Store xmm9 into the first time
+   168 000001CE [18000000]         
+   169 000001D2 F2440F101425-                   movsd xmm10, qword [secondSpeed]    ;Store xmm10 into the first time
+   169 000001D8 [10000000]         
+   170 000001DC F2440F101C25-                   movsd xmm11, qword [secondTime]     ;Store xmm11 into the first time
+   170 000001E2 [28000000]         
+   171                                  
+   172                                          ;Total Time
+   173 000001E6 F2450F58CB                      addsd xmm9, xmm11                   ;Adding the two times together, xmm9 = firstTime, xmm11 = secondTime
+   174 000001EB F2440F110C25-                   movsd qword [finalTime], xmm9       ;Moving xmm9 value into the finalTime
+   174 000001F1 [38000000]         
+   175                                  
+   176                                          ;Total Average
+   177 000001F5 F2440F102425-                   movsd xmm12, [totalDistance]        ;Moving totalDistance value into xmm12
+   177 000001FB [0F010000]         
+   178 000001FF F2450F5EE1                      divsd xmm12, xmm9                   ;Divide these two registers to get total average speed xmm12 = totalDistance, xmm9 = finalTime
+   179 00000204 F2440F112425-                   movsd qword [totalAvgSpeed], xmm12  ;Move the xmm12 value, to get the totalAvgSpeed
+   179 0000020A [30000000]         
+   180                                  
+   181                                          ;Output your average speed string
+   182 0000020E 48BF-                           mov rdi, averageSpeed               ;Getting ready to print the average speed string
+   182 00000210 [C400000000000000] 
+   183 00000218 B800000000                      mov qword rax, 0                    ;Getting the rax ready for push
+   184 0000021D 50                              push rax                            ;Pushing rax to stack
+   185 0000021E E8(00000000)                    call printf                         ;Print the averageSpeed string
+   186 00000223 58                              pop rax                             ;Pop rax since we don't need it anymore
+   187                                  
+   188                                          ;Output average speed value
+   189 00000224 48BF-                           mov rdi, floatFormat                ;Getting ready to output a double-float value
+   189 00000226 [1701000000000000] 
+   190 0000022E F20F100425-                     movsd xmm0, qword [totalAvgSpeed]   ;Moving the total average speed value into xmm0 since it is the one that prints
+   190 00000233 [30000000]         
+   191 00000237 B801000000                      mov qword rax, 1                    ;Getting the rax ready for push, but we are allocating more memory for the double-float
+   192 0000023C 50                              push rax                            ;Pushing rax to stack                            
+   193 0000023D E8(00000000)                    call printf                         ;Print totalAvgSpeed value
+   194 00000242 58                              pop rax                             ;Pop rax since we don't need it anymore
+   195                                  
+   196                                          ;Output mph string
+   197 00000243 B800000000                      mov qword rax, 0                    ;Getting the rax ready for push
+   198 00000248 48BF-                           mov rdi, miles                      ;Getting ready to output the string
+   198 0000024A [FF00000000000000] 
+   199 00000252 50                              push rax                            ;Getting the rax ready for push
+   200 00000253 E8(00000000)                    call printf                         ;Print mph string
+   201 00000258 58                              pop rax                             ;Pop rax since we don't need it anymore
+   202                                  
+   203                                          ;output "Your total time"
+   204 00000259 B800000000                      mov qword rax, 0                    ;Getting the rax ready for push
+   205 0000025E 50                              push rax                            ;Pushing rax to stack  
+   206 0000025F 48BF-                           mov rdi, totalTime                  ;Getting ready to output the string
+   206 00000261 [E000000000000000] 
+   207 00000269 E8(00000000)                    call printf                         ;Print totalTime string
+   208 0000026E 58                              pop rax                             ;Pop rax since we don't need it anymore
+   209                                  
+   210                                          ;Output finalTime
+   211 0000026F 48BF-                           mov rdi, floatFormat                ;Getting ready to output a double-float value
+   211 00000271 [1701000000000000] 
+   212 00000279 F20F100425-                     movsd xmm0, qword [finalTime]       ;Moving the total average speed value into xmm0 since it is the one that prints
+   212 0000027E [38000000]         
+   213 00000282 B801000000                      mov qword rax, 1                    ;Getting the rax ready for push, but we are allocating more memory for the double-float
+   214 00000287 50                              push rax                            ;Getting the rax ready for push
+   215 00000288 E8(00000000)                    call printf                         ;Print the double-float value
+   216 0000028D 58                              pop rax                             ;Pop rax since we don't need it anymore
+   217                                  
+   218                                          ;Output hours string
+   219 0000028E 48BF-                           mov rdi, hours                      ;Preparing the string to be printed
+   219 00000290 [0601000000000000] 
+   220 00000298 B800000000                      mov qword rax, 0                    ;Getting the rax ready for push
+   221 0000029D 50                              push rax                            ;Pushing rax to stack                       
+   222 0000029E E8(00000000)                    call printf                         ;Print the string to attach to the end of the first string
+   223 000002A3 58                              pop rax                             ;Pop rax since we don't need it anymore
+   224                                  
+   225 000002A4 F20F100425-                     movsd xmm0, qword [finalTime] ;Get the final value of xmm0 to be the final time
+   225 000002A9 [38000000]         
+   226                                  
+   227 000002AD C3                              ret
